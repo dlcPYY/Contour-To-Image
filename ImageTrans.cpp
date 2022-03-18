@@ -4,6 +4,26 @@
 bool cmp(contour xi, contour yi) {
 	return xi.size > yi.size;
 }
+//true:逆时针，外轮廓
+bool ImageTrans::IsConterClockwise(vector<cv::Point> currContour)
+{
+	float d = 0;
+	Point p1, p0;
+	for (int pIdx = 0; pIdx < currContour.size() - 1; pIdx++)
+	{
+		p0 = currContour.at(pIdx);
+		p1 = currContour.at(pIdx + 1);
+		d += -0.5 * (p1.y + p0.y) * (p1.x - p0.x);
+	}
+	Point first, last;
+	first = currContour.at(0);
+	last = currContour.at(currContour.size() - 1); //这条边不能忘记,加上这条边，使得轮廓闭合
+	d += -0.5 * (first.y + last.y) * (first.x - last.x);
+	if (d > 0)
+		return true;
+	else
+		return false;
+}
 
 ImageTrans::ImageTrans(vector<vector<vector<cv::Point>>>* inputPoints, string outputFilePath) {
 	allPoints = new vector<vector<vector<cv::Point>>>(*inputPoints);
@@ -31,50 +51,24 @@ ImageTrans::ImageTrans(vector<vector<vector<cv::Point>>>* inputPoints, string ou
 		}
 	}
 	
-	
 
-
-
-	for (int i = 21; i < allPoints->size(); i++) {
-		contour everyContour[50];
+	for (int i = 0; i < allPoints->size(); i++) {
 		string filePath = outputFilePath + std::to_string(i) + ".png";
 		Mat mat(DLPImageRow, DLPImageCol, CV_8UC1, Scalar(0));
-		vector<vector<cv::Point>> allContour;
+		 bool isConterClockwise[50];
 		for (int j = 0; j < allPoints->at(i).size(); j++) {
-			everyContour[j].contourPoint = allPoints->at(i).at(j);
-			if (everyContour[j].contourPoint.size() <= 3)everyContour[j].size = 0;
-			else 
-				everyContour[j].size = contourArea(allPoints->at(i).at(j));
+			if (allPoints->at(i).at(j).size() == 0) continue;
+			isConterClockwise[j] = IsConterClockwise(allPoints->at(i).at(j));
 		}
-		sort(everyContour, everyContour + allPoints->at(i).size(), cmp);
-	
 		for (int j = 0; j < allPoints->at(i).size(); j++) {
-			vector<cv::Point > nowContour;
-			for (int k = 0; k < everyContour[j].contourPoint.size(); k++) {
-				int nowCol = everyContour[j].contourPoint.at(k).y;// / pixelSize;//allPoints->at(i).at(j).at(k).y / pixelSize;
-				int nowRow = everyContour[j].contourPoint.at(k).x;// / pixelSize;
-				cv::Point nowPoint;
-				nowPoint.x = nowRow;
-				nowPoint.y = nowCol;
-				nowContour.push_back(nowPoint);
-			}
-			allContour.push_back(nowContour);
+			if (allPoints->at(i).at(j).size() == 0) continue;
+			if(isConterClockwise[j])
+			cv::drawContours(mat, allPoints->at(i), j, Scalar(255 ), 3);
 		}
-		for (int j = 0; j < allContour.size(); j++) {
-			int color = -1;
-			if (allContour.at(j).size() <= 3) continue;
-			for (int ii = 0; ii < mat.rows; ii++) {
-				if (color >= 0) break;
-				for (int jj = 0; jj < mat.cols; jj++) {
-					double distance = pointPolygonTest(allContour[j], Point2f(jj, ii), true);
-					if (distance > 0.1) {
-						color = mat.at<uchar>(ii, jj);
-						break;
-					}
-				}
-			}
-			cv::drawContours(mat, allContour, j, Scalar(255-color ), -1);
-			cout << color << endl;
+		for (int j = 0; j < allPoints->at(i).size(); j++) {
+			if (allPoints->at(i).at(j).size() == 0) continue;
+			if (!isConterClockwise[j])
+				cv::drawContours(mat, allPoints->at(i), j, Scalar(155), 3);
 		}
 		cout << "Fin\t" << i << endl;
 		cv::imwrite(filePath, mat);

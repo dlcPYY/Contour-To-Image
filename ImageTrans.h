@@ -21,6 +21,7 @@ const int DLPImageCol = 1920;
 class ImageTrans
 {
 public:
+	bool IsConterClockwise(vector<cv::Point> currContour);
 	ImageTrans(vector<vector<vector<cv::Point>>>* inputPoints, string outputFilePath);
 private:
 	vector<vector<vector<cv::Point>>>* allPoints;
